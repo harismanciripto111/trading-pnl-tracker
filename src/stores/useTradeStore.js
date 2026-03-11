@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay } from 'date-fns';
 
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).substring(2);
+};
+
 export const useTradeStore = create(
   persist(
     (set, get) => ({
@@ -15,7 +22,7 @@ export const useTradeStore = create(
             ...state.trades,
             {
               ...trade,
-              id: (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).substring(2)),
+              id: generateId(),
               createdAt: Date.now(),
             },
           ],
@@ -47,7 +54,7 @@ export const useTradeStore = create(
         const year = now.getFullYear();
         const month = now.getMonth();
 
-        // Total P&L
+        // Total P&L (all categories)
         const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
 
         // Monthly P&L
@@ -85,6 +92,15 @@ export const useTradeStore = create(
           pnlBySource[src].count++;
         });
 
+        // P&L by category (trading / degen / airdrop)
+        const pnlByCategory = { trading: { pnl: 0, count: 0 }, degen: { pnl: 0, count: 0 }, airdrop: { pnl: 0, count: 0 } };
+        trades.forEach((t) => {
+          const cat = t.category || 'trading';
+          if (!pnlByCategory[cat]) pnlByCategory[cat] = { pnl: 0, count: 0 };
+          pnlByCategory[cat].pnl += t.pnl;
+          pnlByCategory[cat].count++;
+        });
+
         return {
           totalPnl,
           monthlyPnl,
@@ -93,7 +109,15 @@ export const useTradeStore = create(
           bestDay,
           worstDay,
           pnlBySource,
+          pnlByCategory,
         };
+      },
+
+      // Get trades filtered by category
+      getTradesByCategory: (category) => {
+        const { trades } = get();
+        if (!category || category === 'all') return trades;
+        return trades.filter((t) => (t.category || 'trading') === category);
       },
 
       // Total P&L across all trades
