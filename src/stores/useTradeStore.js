@@ -85,6 +85,15 @@ export const useTradeStore = create(
           pnlBySource[src].count++;
         });
 
+        // P&L by category
+        const pnlByCategory = {};
+        trades.forEach((t) => {
+          const cat = t.category || 'trading';
+          if (!pnlByCategory[cat]) pnlByCategory[cat] = { pnl: 0, count: 0 };
+          pnlByCategory[cat].pnl += t.pnl;
+          pnlByCategory[cat].count++;
+        });
+
         return {
           totalPnl,
           monthlyPnl,
@@ -93,6 +102,7 @@ export const useTradeStore = create(
           bestDay,
           worstDay,
           pnlBySource,
+          pnlByCategory,
         };
       },
 
@@ -233,6 +243,11 @@ export const useTradeStore = create(
         return Object.values(monthly).sort((a, b) =>
           a.month.localeCompare(b.month)
         );
+      },
+
+      // Get trades filtered by category
+      getTradesByCategory: (category) => {
+        return get().trades.filter((t) => (t.category || 'trading') === category);
       },
     }),
     {
