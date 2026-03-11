@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Save } from 'lucide-react';
+import { X, Plus, Save, Zap, Gift, TrendingUp } from 'lucide-react';
 import { useTradeStore } from '../../stores/useTradeStore';
 
 const SOURCE_OPTIONS = [
@@ -13,7 +13,20 @@ const SOURCE_OPTIONS = [
   'Other',
 ];
 
+const CATEGORY_OPTIONS = [
+  { key: 'trading', label: 'Trading', icon: 'TrendingUp', color: 'gold', desc: 'Regular long/short trades' },
+  { key: 'degen', label: 'Degen', icon: 'Zap', color: 'purple-400', desc: 'Degen plays, memecoins, etc' },
+  { key: 'airdrop', label: 'Airdrop', icon: 'Gift', color: 'cyan-400', desc: 'Free tokens from airdrops' },
+];
+
+const categoryIcons = {
+  trading: TrendingUp,
+  degen: Zap,
+  airdrop: Gift,
+};
+
 const defaultForm = {
+  category: 'trading',
   pair: '',
   type: 'long',
   entryPrice: '',
@@ -31,11 +44,13 @@ export default function TradeForm({ editTrade = null, onClose }) {
   const [form, setForm] = useState(defaultForm);
   const [errors, setErrors] = useState({});
 
+  const isSimpleMode = form.category === 'degen' || form.category === 'airdrop';
+
   useEffect(() => {
     if (editTrade) {
-      // Check if source matches a preset option
       const isPreset = SOURCE_OPTIONS.includes(editTrade.source);
       setForm({
+        category: editTrade.category || 'trading',
         pair: editTrade.pair || '',
         type: editTrade.type || 'long',
         entryPrice: editTrade.entryPrice?.toString() || '',
@@ -52,7 +67,7 @@ export default function TradeForm({ editTrade = null, onClose }) {
 
   const validate = () => {
     const errs = {};
-    if (!form.pair.trim()) errs.pair = 'Trading pair is required';
+    if (!form.pair.trim()) errs.pair = isSimpleMode ? 'Token/pair is required' : 'Trading pair is required';
     if (!form.pnl || isNaN(Number(form.pnl))) errs.pnl = 'Valid P&L amount is required';
     if (!form.date) errs.date = 'Date is required';
     if (!form.source) errs.source = 'Source/Platform is required';
@@ -66,10 +81,11 @@ export default function TradeForm({ editTrade = null, onClose }) {
     if (!validate()) return;
 
     const tradeData = {
+      category: form.category,
       pair: form.pair.toUpperCase().trim(),
-      type: form.type,
-      entryPrice: form.entryPrice ? Number(form.entryPrice) : null,
-      exitPrice: form.exitPrice ? Number(form.exitPrice) : null,
+      type: isSimpleMode ? null : form.type,
+      entryPrice: isSimpleMode ? null : (form.entryPrice ? Number(form.entryPrice) : null),
+      exitPrice: isSimpleMode ? null : (form.exitPrice ? Number(form.exitPrice) : null),
       pnl: Number(form.pnl),
       source: form.source === 'Other' ? form.customSource.trim() : form.source,
       date: form.date,
@@ -129,17 +145,53 @@ export default function TradeForm({ editTrade = null, onClose }) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Row 1: Pair + Type */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Category Selector */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Category
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORY_OPTIONS.map((cat) => {
+                  const Icon = categoryIcons[cat.key];
+                  return (
+                    <button
+                      key={cat.key}
+                      type="button"
+                      onClick={() => handleChange('category', cat.key)}
+                      className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl text-xs font-medium border transition-all ${
+                        form.category === cat.key
+                          ? cat.key === 'trading'
+                            ? 'bg-gold/20 border-gold/30 text-gold'
+                            : cat.key === 'degen'
+                            ? 'bg-purple-400/20 border-purple-400/30 text-purple-400'
+                            : 'bg-cyan-400/20 border-cyan-400/30 text-cyan-400'
+                          : 'bg-white/[0.05] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{cat.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {isSimpleMode && (
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {form.category === 'degen' ? 'Simplified form - no need for long/short or entry/exit prices' : 'Simplified form - just log your airdrop gains'}
+                </p>
+              )}
+            </div>
+
+            {/* Row 1: Pair + Type (type only for trading) */}
+            <div className={`grid ${isSimpleMode ? 'grid-cols-1' : 'grid-cols-2'} gap-3`}>
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                  Pair / Asset *
+                  {isSimpleMode ? 'Token / Pair *' : 'Pair / Asset *'}
                 </label>
                 <input
                   type="text"
                   value={form.pair}
                   onChange={(e) => handleChange('pair', e.target.value)}
-                  placeholder="BTC/USDT"
+                  placeholder={isSimpleMode ? 'e.g. PEPE, ARB, WEN' : 'BTC/USDT'}
                   className={inputClass('pair')}
                 />
                 {errors.pair && (
@@ -147,29 +199,31 @@ export default function TradeForm({ editTrade = null, onClose }) {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                  Type
-                </label>
-                <div className="flex gap-2">
-                  {['long', 'short'].map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => handleChange('type', t)}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
-                        form.type === t
-                          ? t === 'long'
-                            ? 'bg-emerald/20 border-emerald/30 text-emerald'
-                            : 'bg-ruby/20 border-ruby/30 text-ruby'
-                          : 'bg-white/[0.05] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
-                      }`}
-                    >
-                      {t.charAt(0).toUpperCase() + t.slice(1)}
-                    </button>
-                  ))}
+              {!isSimpleMode && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                    Type
+                  </label>
+                  <div className="flex gap-2">
+                    {['long', 'short'].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => handleChange('type', t)}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
+                          form.type === t
+                            ? t === 'long'
+                              ? 'bg-emerald/20 border-emerald/30 text-emerald'
+                              : 'bg-ruby/20 border-ruby/30 text-ruby'
+                            : 'bg-white/[0.05] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                        }`}
+                      >
+                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Row 2: Source/Platform */}
@@ -213,55 +267,59 @@ export default function TradeForm({ editTrade = null, onClose }) {
               )}
             </div>
 
-            {/* Row 3: Entry & Exit Price */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                  Entry Price
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={form.entryPrice}
-                  onChange={(e) => handleChange('entryPrice', e.target.value)}
-                  placeholder="0.00"
-                  className={inputClass('entryPrice')}
-                />
-              </div>
+            {/* Row 3: Entry & Exit Price (only for trading) */}
+            {!isSimpleMode && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                    Entry Price
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.entryPrice}
+                    onChange={(e) => handleChange('entryPrice', e.target.value)}
+                    placeholder="0.00"
+                    className={inputClass('entryPrice')}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                  Exit Price
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  value={form.exitPrice}
-                  onChange={(e) => handleChange('exitPrice', e.target.value)}
-                  placeholder="0.00"
-                  className={inputClass('exitPrice')}
-                />
+                <div>
+                  <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                    Exit Price
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.exitPrice}
+                    onChange={(e) => handleChange('exitPrice', e.target.value)}
+                    placeholder="0.00"
+                    className={inputClass('exitPrice')}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Row 4: P&L */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5">
-                Profit / Loss (P&L) *
+                {isSimpleMode ? (form.category === 'airdrop' ? 'Airdrop Value (USD) *' : 'Profit / Loss *') : 'Profit / Loss (P&L) *'}
               </label>
               <input
                 type="number"
                 step="any"
                 value={form.pnl}
                 onChange={(e) => handleChange('pnl', e.target.value)}
-                placeholder="Enter amount (positive = profit, negative = loss)"
+                placeholder={isSimpleMode ? (form.category === 'airdrop' ? 'Value received in USD' : 'Enter P&L amount') : 'Enter amount (positive = profit, negative = loss)'}
                 className={inputClass('pnl')}
               />
               {errors.pnl && (
                 <p className="text-ruby text-xs mt-1">{errors.pnl}</p>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                Use positive numbers for profit, negative for loss (e.g. -50)
+                {form.category === 'airdrop'
+                  ? 'Enter the USD value of tokens received'
+                  : 'Use positive numbers for profit, negative for loss (e.g. -50)'}
               </p>
             </div>
 
@@ -303,7 +361,13 @@ export default function TradeForm({ editTrade = null, onClose }) {
               <textarea
                 value={form.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
-                placeholder="Strategy, reason for entry, lessons learned..."
+                placeholder={
+                  form.category === 'airdrop'
+                    ? 'Which airdrop, claim details...'
+                    : form.category === 'degen'
+                    ? 'Degen play details, what happened...'
+                    : 'Strategy, reason for entry, lessons learned...'
+                }
                 rows={3}
                 className={`${inputClass('notes')} resize-none`}
               />
@@ -320,7 +384,13 @@ export default function TradeForm({ editTrade = null, onClose }) {
               </button>
               <button
                 type="submit"
-                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gold/20 border border-gold/30 text-gold hover:bg-gold/30 transition-all flex items-center justify-center gap-2"
+                className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2 ${
+                  form.category === 'degen'
+                    ? 'bg-purple-400/20 border-purple-400/30 text-purple-400 hover:bg-purple-400/30'
+                    : form.category === 'airdrop'
+                    ? 'bg-cyan-400/20 border-cyan-400/30 text-cyan-400 hover:bg-cyan-400/30'
+                    : 'bg-gold/20 border-gold/30 text-gold hover:bg-gold/30'
+                }`}
               >
                 {editTrade ? (
                   <>
@@ -328,7 +398,8 @@ export default function TradeForm({ editTrade = null, onClose }) {
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4" /> Add Trade
+                    {form.category === 'degen' ? <Zap className="w-4 h-4" /> : form.category === 'airdrop' ? <Gift className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    {form.category === 'airdrop' ? 'Add Airdrop' : form.category === 'degen' ? 'Add Degen Trade' : 'Add Trade'}
                   </>
                 )}
               </button>
