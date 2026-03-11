@@ -31,6 +31,18 @@ export default {
           dark: '#e03355',
           glow: 'rgba(255, 77, 106, 0.2)',
         },
+        emerald: {
+          DEFAULT: '#00c48c',
+          light: '#33d4a4',
+          dark: '#00a375',
+          glow: 'rgba(0, 196, 140, 0.2)',
+        },
+        ruby: {
+          DEFAULT: '#ff4d6a',
+          light: '#ff7a91',
+          dark: '#e03355',
+          glow: 'rgba(255, 77, 106, 0.2)',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
