@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from '../../utils/formatters';
 import ConfirmModal from '../ui/ConfirmModal';
 
 export default function TradeTable({ onEdit }) {
-  const { trades, deleteTrade } = useTradeStore();
+  const { trades, removeTrade } = useTradeStore();
   const { currency } = useSettingsStore();
 
   const [sortField, setSortField] = useState('date');
@@ -37,12 +37,13 @@ export default function TradeTable({ onEdit }) {
   const filteredTrades = useMemo(() => {
     let result = [...trades];
 
-    // Search filter
+    // Search filter (now includes source)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (t) =>
           t.pair.toLowerCase().includes(q) ||
+          t.source?.toLowerCase().includes(q) ||
           t.notes?.toLowerCase().includes(q)
       );
     }
@@ -63,6 +64,9 @@ export default function TradeTable({ onEdit }) {
       } else if (sortField === 'pair') {
         valA = a.pair;
         valB = b.pair;
+      } else if (sortField === 'source') {
+        valA = a.source || '';
+        valB = b.source || '';
       }
       if (valA < valB) return sortDir === 'asc' ? -1 : 1;
       if (valA > valB) return sortDir === 'asc' ? 1 : -1;
@@ -90,7 +94,7 @@ export default function TradeTable({ onEdit }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
-            placeholder="Search by pair or notes..."
+            placeholder="Search by pair, source, or notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors"
@@ -141,6 +145,12 @@ export default function TradeTable({ onEdit }) {
                 <span className="flex items-center gap-1">Pair <SortIcon field="pair" /></span>
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+              <th
+                onClick={() => handleSort('source')}
+                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
+              >
+                <span className="flex items-center gap-1">Source <SortIcon field="source" /></span>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Entry</th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Exit</th>
               <th
@@ -177,6 +187,11 @@ export default function TradeTable({ onEdit }) {
                       }`}
                     >
                       {trade.type?.toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-white/[0.08] text-gray-300">
+                      {trade.source || '--'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">
@@ -227,7 +242,7 @@ export default function TradeTable({ onEdit }) {
       <ConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={() => deleteTarget && deleteTrade(deleteTarget.id)}
+        onConfirm={() => deleteTarget && removeTrade(deleteTarget.id)}
         title="Delete Trade"
         message={`Are you sure you want to delete the ${deleteTarget?.pair} trade from ${deleteTarget?.date}? This action cannot be undone.`}
       />
