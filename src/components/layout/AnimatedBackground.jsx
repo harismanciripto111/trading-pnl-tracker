@@ -1,5 +1,3 @@
-import { useCallback } from 'react';
-
 export default function AnimatedBackground() {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden">
