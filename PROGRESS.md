@@ -9,8 +9,8 @@
    - Added emerald and ruby objects with DEFAULT, light, dark, glow variants (matching profit/loss values)
 
 2. **src/stores/useTradeStore.js** - Added `getStats()` and `deleteTrade()`
-   - Dashboard.jsx called `getStats()` which didn't exist — added it returning { totalPnl, monthlyPnl, winRate, totalTrades, bestDay, worstDay }
-   - TradeTable.jsx called `deleteTrade()` which didn't exist — added as alias for `removeTrade()`
+   - Dashboard.jsx called `getStats()` which didn't exist -- added it returning { totalPnl, monthlyPnl, winRate, totalTrades, bestDay, worstDay }
+   - TradeTable.jsx called `deleteTrade()` which didn't exist -- added as alias for `removeTrade()`
 
 3. **src/utils/formatters.js** - Added `formatDate()` function
    - Dashboard.jsx, TradeTable.jsx, and Header.jsx all imported `formatDate` but it didn't exist
@@ -28,6 +28,25 @@
 
 ---
 
+## [DONE] - Session 2 (2026-03-11)
+
+### Build Configuration Fixes
+
+1. **src/index.css** - Moved `@import` above `@tailwind` directives
+   - CSS spec requires `@import` statements to precede all other statements
+   - Google Fonts `@import url(...)` was on line 7 (after `@tailwind base/components/utilities`)
+   - Moved it to line 1 to fix `[vite:css] @import must precede all other statements` error
+
+2. **vite.config.js** - Disabled `open: true` in server config
+   - Changed `open: true` to `open: false`
+   - Fixes `Error: spawn xdg-open ENOENT` on headless VPS environments without a desktop browser
+
+### Files Modified
+- `src/index.css`
+- `vite.config.js`
+
+---
+
 ## [IN PROGRESS]
 - Nothing currently in progress
 
@@ -35,7 +54,7 @@
 
 ## [NEXT SESSION] - Suggested Next Steps
 
-1. **Run `npm run dev` and verify the app loads** without errors in the browser console
+1. **Run `npm run dev` and verify the app loads** without errors in terminal or browser console
 2. **Test core flows manually:**
    - Add a trade via TradeForm
    - Check Dashboard stats populate correctly
