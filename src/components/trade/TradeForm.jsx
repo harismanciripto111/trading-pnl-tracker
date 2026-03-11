@@ -3,12 +3,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Save } from 'lucide-react';
 import { useTradeStore } from '../../stores/useTradeStore';
 
+const SOURCE_OPTIONS = [
+  'Binance',
+  'Bybit',
+  'OKX',
+  'Tokocrypto',
+  'Forex',
+  'Saham',
+  'Other',
+];
+
 const defaultForm = {
   pair: '',
   type: 'long',
   entryPrice: '',
   exitPrice: '',
   pnl: '',
+  source: '',
+  customSource: '',
   date: new Date().toISOString().split('T')[0],
   time: new Date().toTimeString().slice(0, 5),
   notes: '',
@@ -21,12 +33,16 @@ export default function TradeForm({ editTrade = null, onClose }) {
 
   useEffect(() => {
     if (editTrade) {
+      // Check if source matches a preset option
+      const isPreset = SOURCE_OPTIONS.includes(editTrade.source);
       setForm({
         pair: editTrade.pair || '',
         type: editTrade.type || 'long',
         entryPrice: editTrade.entryPrice?.toString() || '',
         exitPrice: editTrade.exitPrice?.toString() || '',
         pnl: editTrade.pnl?.toString() || '',
+        source: isPreset ? editTrade.source : (editTrade.source ? 'Other' : ''),
+        customSource: isPreset ? '' : (editTrade.source || ''),
         date: editTrade.date || new Date().toISOString().split('T')[0],
         time: editTrade.time || '00:00',
         notes: editTrade.notes || '',
@@ -39,6 +55,8 @@ export default function TradeForm({ editTrade = null, onClose }) {
     if (!form.pair.trim()) errs.pair = 'Trading pair is required';
     if (!form.pnl || isNaN(Number(form.pnl))) errs.pnl = 'Valid P&L amount is required';
     if (!form.date) errs.date = 'Date is required';
+    if (!form.source) errs.source = 'Source/Platform is required';
+    if (form.source === 'Other' && !form.customSource.trim()) errs.customSource = 'Please specify the source';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -53,6 +71,7 @@ export default function TradeForm({ editTrade = null, onClose }) {
       entryPrice: form.entryPrice ? Number(form.entryPrice) : null,
       exitPrice: form.exitPrice ? Number(form.exitPrice) : null,
       pnl: Number(form.pnl),
+      source: form.source === 'Other' ? form.customSource.trim() : form.source,
       date: form.date,
       time: form.time,
       notes: form.notes.trim(),
@@ -94,49 +113,56 @@ export default function TradeForm({ editTrade = null, onClose }) {
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-lg bg-[#111827]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-2xl"
+          className="w-full max-w-lg bg-[#111827]/95 backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-white">
+            <h3 className="text-lg font-bold text-white">
               {editTrade ? 'Edit Trade' : 'Add New Trade'}
-            </h2>
+            </h3>
             <button
               onClick={onClose}
-              className="p-2 rounded-xl hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Row 1: Pair + Type */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Trading Pair</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Pair / Asset *
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. BTC/USDT"
                   value={form.pair}
                   onChange={(e) => handleChange('pair', e.target.value)}
+                  placeholder="BTC/USDT"
                   className={inputClass('pair')}
                 />
-                {errors.pair && <p className="text-ruby text-xs mt-1">{errors.pair}</p>}
+                {errors.pair && (
+                  <p className="text-ruby text-xs mt-1">{errors.pair}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Type</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Type
+                </label>
                 <div className="flex gap-2">
                   {['long', 'short'].map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => handleChange('type', t)}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-medium border transition-all ${
                         form.type === t
                           ? t === 'long'
-                            ? 'bg-emerald/20 text-emerald border border-emerald/30'
-                            : 'bg-ruby/20 text-ruby border border-ruby/30'
-                          : 'bg-white/[0.05] text-gray-400 border border-white/[0.08] hover:bg-white/10'
+                            ? 'bg-emerald/20 border-emerald/30 text-emerald'
+                            : 'bg-ruby/20 border-ruby/30 text-ruby'
+                          : 'bg-white/[0.05] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
                       }`}
                     >
                       {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -146,58 +172,120 @@ export default function TradeForm({ editTrade = null, onClose }) {
               </div>
             </div>
 
-            {/* Row 2: Entry + Exit Price */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 2: Source/Platform */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Source / Platform *
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {SOURCE_OPTIONS.map((src) => (
+                  <button
+                    key={src}
+                    type="button"
+                    onClick={() => {
+                      handleChange('source', src);
+                      if (src !== 'Other') handleChange('customSource', '');
+                    }}
+                    className={`py-2 rounded-xl text-xs font-medium border transition-all ${
+                      form.source === src
+                        ? 'bg-gold/20 border-gold/30 text-gold'
+                        : 'bg-white/[0.05] border-white/[0.08] text-gray-400 hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {src}
+                  </button>
+                ))}
+              </div>
+              {errors.source && (
+                <p className="text-ruby text-xs mt-1">{errors.source}</p>
+              )}
+              {form.source === 'Other' && (
+                <input
+                  type="text"
+                  value={form.customSource}
+                  onChange={(e) => handleChange('customSource', e.target.value)}
+                  placeholder="Enter platform name..."
+                  className={`${inputClass('customSource')} mt-2`}
+                />
+              )}
+              {errors.customSource && (
+                <p className="text-ruby text-xs mt-1">{errors.customSource}</p>
+              )}
+            </div>
+
+            {/* Row 3: Entry & Exit Price */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Entry Price</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Entry Price
+                </label>
                 <input
                   type="number"
                   step="any"
-                  placeholder="Optional"
                   value={form.entryPrice}
                   onChange={(e) => handleChange('entryPrice', e.target.value)}
+                  placeholder="0.00"
                   className={inputClass('entryPrice')}
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Exit Price</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Exit Price
+                </label>
                 <input
                   type="number"
                   step="any"
-                  placeholder="Optional"
                   value={form.exitPrice}
                   onChange={(e) => handleChange('exitPrice', e.target.value)}
+                  placeholder="0.00"
                   className={inputClass('exitPrice')}
                 />
               </div>
             </div>
 
-            {/* Row 3: P&L + Date + Time */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Row 4: P&L */}
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Profit / Loss (P&L) *
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={form.pnl}
+                onChange={(e) => handleChange('pnl', e.target.value)}
+                placeholder="Enter amount (positive = profit, negative = loss)"
+                className={inputClass('pnl')}
+              />
+              {errors.pnl && (
+                <p className="text-ruby text-xs mt-1">{errors.pnl}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Use positive numbers for profit, negative for loss (e.g. -50)
+              </p>
+            </div>
+
+            {/* Row 5: Date & Time */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">P&L ($)</label>
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="e.g. 150.50"
-                  value={form.pnl}
-                  onChange={(e) => handleChange('pnl', e.target.value)}
-                  className={inputClass('pnl')}
-                />
-                {errors.pnl && <p className="text-ruby text-xs mt-1">{errors.pnl}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Date</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Date *
+                </label>
                 <input
                   type="date"
                   value={form.date}
                   onChange={(e) => handleChange('date', e.target.value)}
                   className={inputClass('date')}
                 />
-                {errors.date && <p className="text-ruby text-xs mt-1">{errors.date}</p>}
+                {errors.date && (
+                  <p className="text-ruby text-xs mt-1">{errors.date}</p>
+                )}
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Time</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Time
+                </label>
                 <input
                   type="time"
                   value={form.time}
@@ -207,29 +295,44 @@ export default function TradeForm({ editTrade = null, onClose }) {
               </div>
             </div>
 
-            {/* Notes */}
+            {/* Row 6: Notes */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                Notes
+              </label>
               <textarea
-                placeholder="Trade notes (optional)"
-                rows={2}
                 value={form.notes}
                 onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder="Strategy, reason for entry, lessons learned..."
+                rows={3}
                 className={`${inputClass('notes')} resize-none`}
               />
             </div>
 
             {/* Submit */}
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl text-sm font-bold bg-gold/20 text-gold border border-gold/30 hover:bg-gold/30 transition-all flex items-center justify-center gap-2"
-            >
-              {editTrade ? (
-                <><Save className="w-4 h-4" /> Update Trade</>
-              ) : (
-                <><Plus className="w-4 h-4" /> Add Trade</>
-              )}
-            </button>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-white/[0.05] border border-white/[0.08] text-gray-400 hover:bg-white/[0.08] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gold/20 border border-gold/30 text-gold hover:bg-gold/30 transition-all flex items-center justify-center gap-2"
+              >
+                {editTrade ? (
+                  <>
+                    <Save className="w-4 h-4" /> Update Trade
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" /> Add Trade
+                  </>
+                )}
+              </button>
+            </div>
           </form>
         </motion.div>
       </motion.div>
