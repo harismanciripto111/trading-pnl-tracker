@@ -1,10 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ==================== GLOBAL STYLES ==================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* ================= GLOBAL STYLES ================= */
 
 :root {
   --color-bg: #0a0e1a;
@@ -28,7 +28,7 @@ body {
   overflow-x: hidden;
 }
 
-/* ==================== SCROLLBAR ==================== */
+/* ================= SCROLLBAR ================= */
 
 ::-webkit-scrollbar {
   width: 6px;
@@ -48,7 +48,7 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ==================== ANIMATIONS ==================== */
+/* ================= ANIMATIONS ================= */
 
 @keyframes gradient-shift {
   0%,
@@ -129,7 +129,7 @@ body {
   animation: spin-slow 20s linear infinite;
 }
 
-/* ==================== GLASSMORPHISM UTILITIES ==================== */
+/* ================= GLASSMORPHISM UTILITIES ================= */
 
 .glass {
   background: rgba(17, 24, 39, 0.6);
@@ -143,7 +143,7 @@ body {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-/* ==================== INPUT OVERRIDES ==================== */
+/* ================= INPUT OVERRIDES ================= */
 
 input[type='date']::-webkit-calendar-picker-indicator,
 input[type='time']::-webkit-calendar-picker-indicator {
@@ -159,24 +159,4 @@ input[type='number']::-webkit-outer-spin-button {
 
 input[type='number'] {
   -moz-appearance: textfield;
-}
-
-/* ==================== SELECTION ==================== */
-
-::selection {
-  background: rgba(240, 185, 11, 0.3);
-  color: #f9fafb;
-}
-
-/* ==================== RECHARTS OVERRIDES ==================== */
-
-.recharts-default-tooltip {
-  background: rgba(17, 24, 39, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(20px);
-}
-
-.recharts-tooltip-label {
-  color: #9ca3af !important;
 }
