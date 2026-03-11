@@ -166,7 +166,14 @@ export default function Dashboard() {
                       >
                         <div>
                           <p className="text-sm font-medium text-white">{trade.pair}</p>
-                          <p className="text-xs text-gray-500">{formatDate(trade.date)}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDate(trade.date)}
+                            {trade.source && (
+                              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-white/[0.08] text-gray-400 text-[10px]">
+                                {trade.source}
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <PnLBadge value={trade.pnl} currency={currency} size="xs" />
                       </div>
