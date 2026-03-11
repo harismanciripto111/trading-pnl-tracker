@@ -9,6 +9,8 @@ import {
   Award,
   AlertTriangle,
   ArrowRight,
+  Zap,
+  Gift,
 } from 'lucide-react';
 import PageTransition from '../components/ui/PageTransition';
 import StatCard from '../components/ui/StatCard';
@@ -30,6 +32,12 @@ const container = {
 const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 },
+};
+
+const CATEGORY_CONFIG = {
+  trading: { label: 'Trading', Icon: TrendingUp, text: 'text-gold', bg: 'bg-gold/20' },
+  degen: { label: 'Degen', Icon: Zap, text: 'text-purple-400', bg: 'bg-purple-400/20' },
+  airdrop: { label: 'Airdrop', Icon: Gift, text: 'text-cyan-400', bg: 'bg-cyan-400/20' },
 };
 
 export default function Dashboard() {
@@ -90,8 +98,9 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
-        {/* Best / Worst Day */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Category Breakdown + Best/Worst Day */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Best Day */}
           <motion.div variants={item}>
             <GlassCard>
               <div className="flex items-center gap-3 p-4">
@@ -109,6 +118,7 @@ export default function Dashboard() {
             </GlassCard>
           </motion.div>
 
+          {/* Worst Day */}
           <motion.div variants={item}>
             <GlassCard>
               <div className="flex items-center gap-3 p-4">
@@ -121,6 +131,44 @@ export default function Dashboard() {
                     {formatCurrency(stats.worstDay?.pnl || 0, currency)}
                   </p>
                   <p className="text-xs text-gray-500">{stats.worstDay?.date ? formatDate(stats.worstDay.date) : 'N/A'}</p>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+
+          {/* Degen P&L */}
+          <motion.div variants={item}>
+            <GlassCard>
+              <div className="flex items-center gap-3 p-4">
+                <div className="p-2.5 rounded-xl bg-purple-400/20">
+                  <Zap className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Degen P&L</p>
+                  <p className={`text-lg font-bold font-mono ${(stats.pnlByCategory?.degen?.pnl || 0) >= 0 ? 'text-emerald' : 'text-ruby'}`}>
+                    {(stats.pnlByCategory?.degen?.pnl || 0) >= 0 ? '+' : ''}
+                    {formatCurrency(stats.pnlByCategory?.degen?.pnl || 0, currency)}
+                  </p>
+                  <p className="text-xs text-gray-500">{stats.pnlByCategory?.degen?.count || 0} trades</p>
+                </div>
+              </div>
+            </GlassCard>
+          </motion.div>
+
+          {/* Airdrop P&L */}
+          <motion.div variants={item}>
+            <GlassCard>
+              <div className="flex items-center gap-3 p-4">
+                <div className="p-2.5 rounded-xl bg-cyan-400/20">
+                  <Gift className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Airdrop Gains</p>
+                  <p className={`text-lg font-bold font-mono ${(stats.pnlByCategory?.airdrop?.pnl || 0) >= 0 ? 'text-emerald' : 'text-ruby'}`}>
+                    {(stats.pnlByCategory?.airdrop?.pnl || 0) >= 0 ? '+' : ''}
+                    {formatCurrency(stats.pnlByCategory?.airdrop?.pnl || 0, currency)}
+                  </p>
+                  <p className="text-xs text-gray-500">{stats.pnlByCategory?.airdrop?.count || 0} airdrops</p>
                 </div>
               </div>
             </GlassCard>
@@ -159,25 +207,37 @@ export default function Dashboard() {
                   <p className="text-gray-500 text-sm text-center py-8">No trades yet</p>
                 ) : (
                   <div className="space-y-2">
-                    {recentTrades.map((trade) => (
-                      <div
-                        key={trade.id}
-                        className="flex items-center justify-between py-2 border-b border-white/[0.05] last:border-0"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-white">{trade.pair}</p>
-                          <p className="text-xs text-gray-500">
-                            {formatDate(trade.date)}
-                            {trade.source && (
-                              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-white/[0.08] text-gray-400 text-[10px]">
-                                {trade.source}
+                    {recentTrades.map((trade) => {
+                      const cat = trade.category || 'trading';
+                      const catConfig = CATEGORY_CONFIG[cat] || CATEGORY_CONFIG.trading;
+                      const CatIcon = catConfig.Icon;
+
+                      return (
+                        <div
+                          key={trade.id}
+                          className="flex items-center justify-between py-2 border-b border-white/[0.05] last:border-0"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium text-white">{trade.pair}</p>
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium ${catConfig.bg} ${catConfig.text}`}>
+                                <CatIcon className="w-2.5 h-2.5" />
+                                {catConfig.label}
                               </span>
-                            )}
-                          </p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {formatDate(trade.date)}
+                              {trade.source && (
+                                <span className="ml-1.5 px-1.5 py-0.5 rounded bg-white/[0.08] text-gray-400 text-[10px]">
+                                  {trade.source}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <PnLBadge value={trade.pnl} currency={currency} size="xs" />
                         </div>
-                        <PnLBadge value={trade.pnl} currency={currency} size="xs" />
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
