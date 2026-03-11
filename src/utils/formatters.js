@@ -1,3 +1,5 @@
+import { format, parseISO } from 'date-fns';
+
 /**
  * Currency formatter
  * @param {number} value - Amount to format
@@ -43,13 +45,26 @@ export function formatPercent(value) {
 }
 
 /**
+ * Date formatter - converts ISO date string to human-readable format
+ * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+ * @returns {string} Formatted date (e.g., "Mar 4, 2026")
+ */
+export function formatDate(dateStr) {
+  try {
+    return format(parseISO(dateStr), 'MMM d, yyyy');
+  } catch {
+    return dateStr;
+  }
+}
+
+/**
  * Get P&L color class based on value
  * @param {number} value - P&L amount
  * @returns {string} Tailwind color class
  */
 export function getPnLColor(value) {
-  if (value > 0) return 'text-profit';
-  if (value < 0) return 'text-loss';
+  if (value > 0) return 'text-emerald';
+  if (value < 0) return 'text-ruby';
   return 'text-gray-400';
 }
 
@@ -59,8 +74,8 @@ export function getPnLColor(value) {
  * @returns {string} Tailwind bg color class
  */
 export function getPnLBgColor(value) {
-  if (value > 0) return 'bg-profit/20';
-  if (value < 0) return 'bg-loss/20';
+  if (value > 0) return 'bg-emerald/20';
+  if (value < 0) return 'bg-ruby/20';
   return 'bg-gray-500/20';
 }
 
