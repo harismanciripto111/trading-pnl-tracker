@@ -54,7 +54,6 @@ export default function AnimatedBackground() {
 }
 
 function Particle({ index }) {
-  // Deterministic pseudo-random positioning based on index
   const left = ((index * 37 + 13) % 100);
   const top = ((index * 53 + 7) % 100);
   const size = 2 + (index % 3);
