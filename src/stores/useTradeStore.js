@@ -33,12 +33,70 @@ export const useTradeStore = create(
           trades: state.trades.filter((t) => t.id !== id),
         })),
 
+      // Alias for removeTrade (used by TradeTable)
+      deleteTrade: (id) =>
+        set((state) => ({
+          trades: state.trades.filter((t) => t.id !== id),
+        })),
+
       clearAllTrades: () => set({ trades: [] }),
 
       importTrades: (importedTrades) =>
         set({ trades: importedTrades }),
 
       // ==================== GETTERS ====================
+
+      // Aggregate stats object for Dashboard
+      getStats: () => {
+        const { trades } = get();
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        // Total P&L
+        const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
+
+        // Monthly P&L (current month)
+        const monthlyPnl = trades
+          .filter((t) => {
+            const d = parseISO(t.date);
+            return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+          })
+          .reduce((sum, t) => sum + t.pnl, 0);
+
+        // Win rate
+        const winRate = trades.length > 0
+          ? Math.round((trades.filter((t) => t.pnl > 0).length / trades.length) * 100)
+          : 0;
+
+        // Total trades
+        const totalTrades = trades.length;
+
+        // Best day
+        const dailyPnL = groupByDate(trades);
+        let bestDay = { date: null, pnl: 0 };
+        let worstDay = { date: null, pnl: 0 };
+
+        if (trades.length > 0) {
+          bestDay = { date: null, pnl: -Infinity };
+          worstDay = { date: null, pnl: Infinity };
+          for (const [date, pnl] of Object.entries(dailyPnL)) {
+            if (pnl > bestDay.pnl) bestDay = { date, pnl };
+            if (pnl < worstDay.pnl) worstDay = { date, pnl };
+          }
+          if (bestDay.pnl === -Infinity) bestDay = { date: null, pnl: 0 };
+          if (worstDay.pnl === Infinity) worstDay = { date: null, pnl: 0 };
+        }
+
+        return {
+          totalPnl: Math.round(totalPnl * 100) / 100,
+          monthlyPnl: Math.round(monthlyPnl * 100) / 100,
+          winRate,
+          totalTrades,
+          bestDay,
+          worstDay,
+        };
+      },
 
       // Total P&L across all trades
       getTotalPnL: () => {
