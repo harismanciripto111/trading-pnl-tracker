@@ -78,65 +78,18 @@
    - Added **source badge** to Recent Trades list (small inline tag showing platform)
    - **Typo fix:** `text-gray--400` corrected to `text-gray-400` in Best Day section
 
----
-
-## [DONE] - Session 4 (2026-03-11)
-
-### Feature: Degen & Airdrop Trade Categories
-
-**Goal:** Add simplified trade entry for Degen plays and Airdrop gains -- no need to fill long/short, entry/exit prices. Just token name, P&L, source, date, and notes.
-
-#### Changes Made
-
-1. **PLAN.md** (`1a540f0`)
-   - Updated Trade Logger section to include category selector (Trading/Degen/Airdrop)
-   - Documented simplified Degen/Airdrop mode (no long/short, no entry/exit)
-   - Added category filtering and badge display to trade history table spec
-
-2. **src/stores/useTradeStore.js** (`cace377`)
-   - Added `pnlByCategory` aggregation to `getStats()` -- groups P&L and trade count by category (trading/degen/airdrop)
-   - Added `getTradesByCategory(category)` getter -- filter trades by category
-   - Backward compatible: trades without `category` field default to `'trading'`
-   - `pnlByCategory` returned in stats object for Dashboard use
-
-3. **src/components/trade/TradeForm.jsx** (`5af17aa`)
-   - Added **Category Selector** at top of form: Trading (gold, TrendingUp icon) / Degen (purple, Zap icon) / Airdrop (cyan, Gift icon)
-   - **Simple Mode** (`isSimpleMode`): when Degen or Airdrop is selected, hides Long/Short toggle and Entry/Exit price fields
-   - Dynamic labels: "Token / Pair" for degen/airdrop, "Pair / Asset" for trading
-   - Dynamic placeholders: "e.g. PEPE, ARB, WEN" for degen/airdrop, "BTC/USDT" for trading
-   - P&L label changes to "Airdrop Value (USD)" for airdrops
-   - Submit button color and icon adapts per category (purple Zap for degen, cyan Gift for airdrop)
-   - Notes placeholder is context-aware per category
-   - Edit mode correctly loads `category` field from existing trade data
-
-4. **src/components/trade/TradeTable.jsx** (`feat commit`)
-   - Added **Category column** with sortable header and colored badge + icon (Trading=gold, Degen=purple, Airdrop=cyan)
-   - Added **Category Filter Row** below toolbar: All Categories / Trading / Degen / Airdrop buttons
-   - Search now includes category field
-   - Sort logic extended with category field
-   - Type column shows `--` for degen/airdrop trades (no long/short)
-   - Removed Entry/Exit columns to streamline table (data still stored, just not displayed in table)
-
-5. **src/pages/Dashboard.jsx** (`feat commit`)
-   - Added **Degen P&L card** with purple Zap icon showing total degen profit/loss and trade count
-   - Added **Airdrop Gains card** with cyan Gift icon showing total airdrop value and count
-   - Rearranged layout: stat cards row + category/best/worst row (4 columns) + equity curve + recent trades
-   - Recent Trades now shows **category badge** next to pair name (color-coded icon + label)
-   - All category cards show `pnlByCategory` data from store's `getStats()`
-
-#### Updated Trade Data Structure
+#### New Trade Data Structure
 ```json
 {
-  "category": "degen",
-  "pair": "PEPE",
-  "type": null,
-  "entryPrice": null,
-  "exitPrice": null,
-  "pnl": 500,
-  "source": "Bybit",
+  "pair": "BTC/USDT",
+  "type": "long",
+  "entryPrice": 65000,
+  "exitPrice": 67000,
+  "pnl": 200,
+  "source": "Binance",
   "date": "2026-03-11",
-  "time": "16:00",
-  "notes": "Memecoin pump, sold at peak",
+  "time": "14:30",
+  "notes": "Breakout trade on 4H chart",
   "id": "auto-generated-uuid",
   "createdAt": 1741686600000
 }
@@ -144,24 +97,37 @@
 
 ---
 
+## [DONE] - Session 5 (2026-03-11)
+
+### Bug Fix: Airdrop P&L Not Showing on Dashboard ($0.00 bug)
+
+**Problem:** User added $1100 airdrop profit, but Dashboard Airdrop Gains card showed +$0.00 and 0 airdrops.
+
+**Root Cause:** No defensive numeric conversion in the data pipeline. While TradeForm.jsx correctly calls Number(form.pnl) on submit, multiple vulnerability paths existed:
+- importTrades() did zero validation on imported JSON data
+- addTrade() and updateTrade() had no defensive parseFloat
+- All arithmetic in getStats() and other getters used raw t.pnl without conversion
+- Any corrupted/imported data with string pnl values would break ALL calculations
+
+**Fix Applied:** 13 changes to src/stores/useTradeStore.js - defensive parseFloat(t.pnl) || 0 on all arithmetic operations across addTrade, updateTrade, importTrades, getStats, getTotalPnL, getMonthlyPnL, getEquityCurve, getPnLByDayOfWeek, getMonthlyBreakdown, and groupByDate.
+
+---
+
 ## [NEXT SESSION] - Suggested Next Steps
 
-1. **Test the full flow on VPS:** Run `npm run dev`, add trades with each category (Trading/Degen/Airdrop), verify form simplification, table display, and dashboard cards
-2. **Tailwind safelist check:** Verify `purple-400` and `cyan-400` colors render correctly -- may need to add them to `tailwind.config.js` safelist if tree-shaking removes them
-3. **Add P&L by Category chart** on Analytics page (pie chart or bar chart showing profit per category)
-4. **Add P&L by Source breakdown** on Analytics page (pie chart or bar chart showing profit per platform)
-5. **Import/Export trades** as CSV/JSON for backup
-6. **Advanced filtering** by source/platform on Trades page
-7. **Date range picker** for Dashboard stats
+1. Test airdrop flow end-to-end: Add airdrop trade via form, verify Dashboard card shows correct value
+2. Check existing localStorage data: If old trades have string pnl values, export > fix > reimport
+3. Add P&L by Category chart on Analytics page
+4. Add P&L by Source breakdown on Analytics page  
+5. Import/Export trades as CSV/JSON for backup
 
 ---
 
 ## Architecture Notes (for context recovery)
 - **Stack:** React 18 + Vite + TailwindCSS + Framer Motion + Recharts + Zustand
-- **State:** Zustand with localStorage persistence (`trading-pnl-storage` key)
-- **No backend** - all data in localStorage (structure ready for DB migration)
-- **Color system:** emerald = profit green (#00c48c), ruby = loss red (#ff4d6a), gold = accent (#f0b90b), purple-400 = degen, cyan-400 = airdrop
-- **Key stores:** useTradeStore (trades + getStats + individual getters + getTradesByCategory), useSettingsStore (currency, theme prefs)
-- **Source options:** Binance, Bybit, OKX, Tokocrypto, Forex, Saham, Other (custom input)
-- **Trade categories:** trading (default, full form), degen (simplified), airdrop (simplified)
-- **Category field:** backward compatible -- old trades without `category` default to `'trading'`
+- **State:** Zustand with localStorage persistence (trading-pnl-storage key)
+- **No backend** - all data in localStorage
+- **Key stores:** useTradeStore (trades + getStats + individual getters + getTradesByCategory), useSettingsStore
+- **Source options:** Binance, Bybit, OKX, Tokocrypto, Forex, Saham, Other
+- **Trade categories:** trading (default), degen (simplified), airdrop (simplified)
+- **Numeric safety:** All pnl/price arithmetic uses parseFloat(t.pnl) || 0 pattern
