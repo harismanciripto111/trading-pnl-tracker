@@ -5,10 +5,8 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay }
 export const useTradeStore = create(
   persist(
     (set, get) => ({
-      // ==================== STATE ====================
       trades: [],
 
-      // ==================== ACTIONS ====================
       addTrade: (trade) =>
         set((state) => ({
           trades: [
@@ -33,7 +31,6 @@ export const useTradeStore = create(
           trades: state.trades.filter((t) => t.id !== id),
         })),
 
-      // Alias for removeTrade (used by TradeTable)
       deleteTrade: (id) =>
         set((state) => ({
           trades: state.trades.filter((t) => t.id !== id),
@@ -44,19 +41,14 @@ export const useTradeStore = create(
       importTrades: (importedTrades) =>
         set({ trades: importedTrades }),
 
-      // ==================== GETTERS ====================
-
-      // Aggregate stats object for Dashboard
       getStats: () => {
         const { trades } = get();
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentMonth = now.getMonth();
 
-        // Total P&L
         const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
 
-        // Monthly P&L (current month)
         const monthlyPnl = trades
           .filter((t) => {
             const d = parseISO(t.date);
@@ -64,15 +56,12 @@ export const useTradeStore = create(
           })
           .reduce((sum, t) => sum + t.pnl, 0);
 
-        // Win rate
         const winRate = trades.length > 0
           ? Math.round((trades.filter((t) => t.pnl > 0).length / trades.length) * 100)
           : 0;
 
-        // Total trades
         const totalTrades = trades.length;
 
-        // Best day
         const dailyPnL = groupByDate(trades);
         let bestDay = { date: null, pnl: 0 };
         let worstDay = { date: null, pnl: 0 };
@@ -98,13 +87,11 @@ export const useTradeStore = create(
         };
       },
 
-      // Total P&L across all trades
       getTotalPnL: () => {
         const { trades } = get();
         return trades.reduce((sum, t) => sum + t.pnl, 0);
       },
 
-      // Win rate percentage
       getWinRate: () => {
         const { trades } = get();
         if (trades.length === 0) return 0;
@@ -112,10 +99,8 @@ export const useTradeStore = create(
         return (wins / trades.length) * 100;
       },
 
-      // Total number of trades
       getTradeCount: () => get().trades.length,
 
-      // Best single day P&L (sum of all trades on that day)
       getBestDay: () => {
         const { trades } = get();
         if (trades.length === 0) return { date: null, pnl: 0 };
@@ -127,7 +112,6 @@ export const useTradeStore = create(
         return best.pnl === -Infinity ? { date: null, pnl: 0 } : best;
       },
 
-      // Worst single day P&L
       getWorstDay: () => {
         const { trades } = get();
         if (trades.length === 0) return { date: null, pnl: 0 };
@@ -139,12 +123,10 @@ export const useTradeStore = create(
         return worst.pnl === Infinity ? { date: null, pnl: 0 } : worst;
       },
 
-      // Get trades for a specific date (YYYY-MM-DD)
       getTradesByDate: (dateStr) => {
         return get().trades.filter((t) => t.date === dateStr);
       },
 
-      // Get monthly P&L for a given year and month (0-indexed)
       getMonthlyPnL: (year, month) => {
         const { trades } = get();
         return trades
@@ -155,7 +137,6 @@ export const useTradeStore = create(
           .reduce((sum, t) => sum + t.pnl, 0);
       },
 
-      // Get daily P&L map for a given month { 'YYYY-MM-DD': totalPnL }
       getDailyPnLForMonth: (year, month) => {
         const { trades } = get();
         const monthTrades = trades.filter((t) => {
@@ -165,7 +146,6 @@ export const useTradeStore = create(
         return groupByDate(monthTrades);
       },
 
-      // Get equity curve data (cumulative P&L over time)
       getEquityCurve: () => {
         const { trades } = get();
         if (trades.length === 0) return [];
@@ -188,7 +168,6 @@ export const useTradeStore = create(
           });
       },
 
-      // Get P&L grouped by day of week (0=Sun, 6=Sat)
       getPnLByDayOfWeek: () => {
         const { trades } = get();
         const days = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
@@ -209,7 +188,6 @@ export const useTradeStore = create(
         }));
       },
 
-      // Get recent trades (last N)
       getRecentTrades: (count = 5) => {
         const { trades } = get();
         return [...trades]
@@ -217,13 +195,12 @@ export const useTradeStore = create(
           .slice(0, count);
       },
 
-      // Get monthly P&L summary for all months with trades
       getMonthlyBreakdown: () => {
         const { trades } = get();
         const monthly = {};
 
         trades.forEach((t) => {
-          const monthKey = t.date.substring(0, 7); // 'YYYY-MM'
+          const monthKey = t.date.substring(0, 7);
           if (!monthly[monthKey]) {
             monthly[monthKey] = { month: monthKey, pnl: 0, trades: 0, wins: 0 };
           }
@@ -243,7 +220,6 @@ export const useTradeStore = create(
   )
 );
 
-// ==================== HELPER ====================
 function groupByDate(trades) {
   const map = {};
   trades.forEach((t) => {
