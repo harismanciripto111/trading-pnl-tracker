@@ -63,7 +63,7 @@ Gradient Mesh BG:     #0a0e1a -> #1a1033 -> #0d1f2d -> #0a0e1a (animated shift)
 - Monthly calendar grid (Sun-Sat) — inspired by the reference screenshot
 - Each day cell shows P&L amount with color coding:
   - Green cell = profit day
-  - Red cell = loss day  
+  - Red cell = loss day
   - Gray/empty = no trade
 - Monthly P&L total + ROI % displayed in header
 - Click on a day to see trade details for that date
@@ -72,16 +72,19 @@ Gradient Mesh BG:     #0a0e1a -> #1a1033 -> #0d1f2d -> #0a0e1a (animated shift)
 
 ### 3. Trade Logger
 - Add new trade form:
+  - **Trade Category selector:** Trading (default) / Degen / Airdrop
   - Trading pair (e.g., BTC/USDT, ETH/USDT)
-  - Trade type: Long / Short
-  - Entry price
-  - Exit price
+  - Trade type: Long / Short (only for Trading category)
+  - Entry price (only for Trading category)
+  - Exit price (only for Trading category)
   - P&L amount (auto-calculated or manual)
   - Date & time
   - Notes (optional)
+  - **Degen/Airdrop mode:** Simplified form - only needs Pair/Token, P&L, Source, Date, Notes (no long/short, no entry/exit)
 - Trade history table:
-  - Sortable by date, pair, P&L
-  - Filterable by pair, date range, profit/loss
+  - Sortable by date, pair, P&L, category
+  - Filterable by pair, date range, profit/loss, category
+  - Category badge displayed (Trading/Degen/Airdrop)
   - Edit & delete trades
   - Alternating row colors for readability
 
