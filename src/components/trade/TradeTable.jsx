@@ -1,10 +1,16 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Edit3, Trash2, ChevronUp, ChevronDown, Search, Filter } from 'lucide-react';
+import { Edit3, Trash2, ChevronUp, ChevronDown, Search, Zap, Gift, TrendingUp } from 'lucide-react';
 import { useTradeStore } from '../../stores/useTradeStore';
 import { useSettingsStore } from '../../stores/useSettingsStore';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import ConfirmModal from '../ui/ConfirmModal';
+
+const CATEGORY_STYLES = {
+  trading: { bg: 'bg-gold/20', text: 'text-gold', border: 'border-gold/30', label: 'Trading', Icon: TrendingUp },
+  degen: { bg: 'bg-purple-400/20', text: 'text-purple-400', border: 'border-purple-400/30', label: 'Degen', Icon: Zap },
+  airdrop: { bg: 'bg-cyan-400/20', text: 'text-cyan-400', border: 'border-cyan-400/30', label: 'Airdrop', Icon: Gift },
+};
 
 export default function TradeTable({ onEdit }) {
   const { trades, removeTrade } = useTradeStore();
@@ -13,7 +19,8 @@ export default function TradeTable({ onEdit }) {
   const [sortField, setSortField] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('all'); // all, profit, loss
+  const [filterType, setFilterType] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const handleSort = (field) => {
@@ -37,20 +44,26 @@ export default function TradeTable({ onEdit }) {
   const filteredTrades = useMemo(() => {
     let result = [...trades];
 
-    // Search filter (now includes source)
+    // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
         (t) =>
           t.pair.toLowerCase().includes(q) ||
           t.source?.toLowerCase().includes(q) ||
-          t.notes?.toLowerCase().includes(q)
+          t.notes?.toLowerCase().includes(q) ||
+          (t.category || 'trading').toLowerCase().includes(q)
       );
     }
 
-    // Type filter
+    // P&L filter
     if (filterType === 'profit') result = result.filter((t) => t.pnl > 0);
     if (filterType === 'loss') result = result.filter((t) => t.pnl < 0);
+
+    // Category filter
+    if (filterCategory !== 'all') {
+      result = result.filter((t) => (t.category || 'trading') === filterCategory);
+    }
 
     // Sort
     result.sort((a, b) => {
@@ -67,6 +80,9 @@ export default function TradeTable({ onEdit }) {
       } else if (sortField === 'source') {
         valA = a.source || '';
         valB = b.source || '';
+      } else if (sortField === 'category') {
+        valA = a.category || 'trading';
+        valB = b.category || 'trading';
       }
       if (valA < valB) return sortDir === 'asc' ? -1 : 1;
       if (valA > valB) return sortDir === 'asc' ? 1 : -1;
@@ -74,7 +90,7 @@ export default function TradeTable({ onEdit }) {
     });
 
     return result;
-  }, [trades, searchQuery, filterType, sortField, sortDir]);
+  }, [trades, searchQuery, filterType, filterCategory, sortField, sortDir]);
 
   if (trades.length === 0) {
     return (
@@ -94,14 +110,14 @@ export default function TradeTable({ onEdit }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
-            placeholder="Search by pair, source, or notes..."
+            placeholder="Search by pair, source, category, or notes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-gold/50 transition-colors"
           />
         </div>
 
-        {/* Filter buttons */}
+        {/* P&L Filter */}
         <div className="flex gap-2">
           {[
             { key: 'all', label: 'All' },
@@ -127,6 +143,37 @@ export default function TradeTable({ onEdit }) {
         </div>
       </div>
 
+      {/* Category Filter Row */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setFilterCategory('all')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            filterCategory === 'all'
+              ? 'bg-white/[0.1] text-white border border-white/[0.15]'
+              : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:bg-white/[0.06]'
+          }`}
+        >
+          All Categories
+        </button>
+        {Object.entries(CATEGORY_STYLES).map(([key, style]) => {
+          const Icon = style.Icon;
+          return (
+            <button
+              key={key}
+              onClick={() => setFilterCategory(key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                filterCategory === key
+                  ? `${style.bg} ${style.text} border ${style.border}`
+                  : 'bg-white/[0.03] text-gray-500 border border-white/[0.06] hover:bg-white/[0.06]'
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {style.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-white/[0.08]">
         <table className="w-full text-sm">
@@ -144,6 +191,12 @@ export default function TradeTable({ onEdit }) {
               >
                 <span className="flex items-center gap-1">Pair <SortIcon field="pair" /></span>
               </th>
+              <th
+                onClick={() => handleSort('category')}
+                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
+              >
+                <span className="flex items-center gap-1">Category <SortIcon field="category" /></span>
+              </th>
               <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
               <th
                 onClick={() => handleSort('source')}
@@ -151,8 +204,6 @@ export default function TradeTable({ onEdit }) {
               >
                 <span className="flex items-center gap-1">Source <SortIcon field="source" /></span>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Entry</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Exit</th>
               <th
                 onClick={() => handleSort('pnl')}
                 className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors"
@@ -164,70 +215,81 @@ export default function TradeTable({ onEdit }) {
           </thead>
           <tbody className="divide-y divide-white/[0.05]">
             <AnimatePresence>
-              {filteredTrades.map((trade, index) => (
-                <motion.tr
-                  key={trade.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ delay: index * 0.02 }}
-                  className="hover:bg-white/[0.03] transition-colors"
-                >
-                  <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
-                    <div>{formatDate(trade.date)}</div>
-                    <div className="text-xs text-gray-500">{trade.time || '--:--'}</div>
-                  </td>
-                  <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{trade.pair}</td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`px-2 py-0.5 rounded-lg text-xs font-medium ${
-                        trade.type === 'long'
-                          ? 'bg-emerald/20 text-emerald'
-                          : 'bg-ruby/20 text-ruby'
+              {filteredTrades.map((trade, index) => {
+                const cat = trade.category || 'trading';
+                const catStyle = CATEGORY_STYLES[cat] || CATEGORY_STYLES.trading;
+                const CatIcon = catStyle.Icon;
+                const isSimple = cat === 'degen' || cat === 'airdrop';
+
+                return (
+                  <motion.tr
+                    key={trade.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ delay: index * 0.02 }}
+                    className="hover:bg-white/[0.03] transition-colors"
+                  >
+                    <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                      <div>{formatDate(trade.date)}</div>
+                      <div className="text-xs text-gray-500">{trade.time || '--:--'}</div>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-white whitespace-nowrap">{trade.pair}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium ${catStyle.bg} ${catStyle.text}`}>
+                        <CatIcon className="w-3 h-3" />
+                        {catStyle.label}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {isSimple ? (
+                        <span className="text-xs text-gray-600">--</span>
+                      ) : (
+                        <span
+                          className={`px-2 py-0.5 rounded-lg text-xs font-medium ${
+                            trade.type === 'long'
+                              ? 'bg-emerald/20 text-emerald'
+                              : 'bg-ruby/20 text-ruby'
+                          }`}
+                        >
+                          {trade.type?.toUpperCase() || '--'}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-white/[0.08] text-gray-300">
+                        {trade.source || '--'}
+                      </span>
+                    </td>
+                    <td
+                      className={`px-4 py-3 text-right font-mono font-bold whitespace-nowrap ${
+                        trade.pnl >= 0 ? 'text-emerald' : 'text-ruby'
                       }`}
                     >
-                      {trade.type?.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-white/[0.08] text-gray-300">
-                      {trade.source || '--'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">
-                    {trade.entryPrice ? `$${trade.entryPrice.toLocaleString()}` : '--'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs whitespace-nowrap">
-                    {trade.exitPrice ? `$${trade.exitPrice.toLocaleString()}` : '--'}
-                  </td>
-                  <td
-                    className={`px-4 py-3 text-right font-mono font-bold whitespace-nowrap ${
-                      trade.pnl >= 0 ? 'text-emerald' : 'text-ruby'
-                    }`}
-                  >
-                    {trade.pnl >= 0 ? '+' : ''}
-                    {formatCurrency(trade.pnl, currency)}
-                  </td>
-                  <td className="px-4 py-3 text-right whitespace-nowrap">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => onEdit(trade)}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-gold transition-colors"
-                        title="Edit trade"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(trade)}
-                        className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-ruby transition-colors"
-                        title="Delete trade"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </motion.tr>
-              ))}
+                      {trade.pnl >= 0 ? '+' : ''}
+                      {formatCurrency(trade.pnl, currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => onEdit(trade)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-gold transition-colors"
+                          title="Edit trade"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(trade)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-ruby transition-colors"
+                          title="Delete trade"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </AnimatePresence>
           </tbody>
         </table>
