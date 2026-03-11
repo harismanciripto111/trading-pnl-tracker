@@ -9,73 +9,108 @@
    - Added emerald and ruby objects with DEFAULT, light, dark, glow variants (matching profit/loss values)
 
 2. **src/stores/useTradeStore.js** - Added `getStats()` and `deleteTrade()`
-   - Dashboard.jsx called `getStats()` which didn't exist -- added it returning { totalPnl, monthlyPnl, winRate, totalTrades, bestDay, worstDay }
-   - TradeTable.jsx called `deleteTrade()` which didn't exist -- added as alias for `removeTrade()`
+   - Dashboard.jsx called `getStats()` which didn't exist — added it returning { totalPnl, monthlyPnl, winRate, totalTrades, bestDay, worstDay }
+   - TradeTable.jsx called `deleteTrade()` which didn't exist — added as alias for `removeTrade()`
 
 3. **src/utils/formatters.js** - Added `formatDate()` function
    - Dashboard.jsx, TradeTable.jsx, and Header.jsx all imported `formatDate` but it didn't exist
    - Added `formatDate(dateStr)` using date-fns `format(parseISO(dateStr), 'MMM d, yyyy')`
-   - Also added `import { format, parseISO } from 'date-fns'` at top
 
 4. **src/components/layout/AnimatedBackground.jsx** - Removed unused `useCallback` import
-   - Was importing `useCallback` from React but never using it
-
-### Files Modified
-- `tailwind.config.js`
-- `src/stores/useTradeStore.js`
-- `src/utils/formatters.js`
-- `src/components/layout/AnimatedBackground.jsx`
 
 ---
 
 ## [DONE] - Session 2 (2026-03-11)
 
-### Build Configuration Fixes
+### Build Config Fixes
 
-1. **src/index.css** - Moved `@import` above `@tailwind` directives
-   - CSS spec requires `@import` statements to precede all other statements
-   - Google Fonts `@import url(...)` was on line 7 (after `@tailwind base/components/utilities`)
-   - Moved it to line 1 to fix `[vite:css] @import must precede all other statements` error
+1. **src/index.css** - Moved `@import url(Google Fonts)` to line 1, above `@tailwind` directives
+   - CSS spec requires `@import` to be the very first statement
+   - Commit: `8b02ac5`
 
-2. **vite.config.js** - Disabled `open: true` in server config
-   - Changed `open: true` to `open: false`
-   - Fixes `Error: spawn xdg-open ENOENT` on headless VPS environments without a desktop browser
-
-3. **vite.config.js** - Added `host: '0.0.0.0'` to server config
-   - Vite defaults to listening on `localhost` (127.0.0.1) only
-   - Added `host: '0.0.0.0'` so the dev server is accessible from external IPs (e.g., local PC -> VPS)
-
-### Files Modified
-- `src/index.css`
-- `vite.config.js`
+2. **vite.config.js** - Changed `open: true` to `open: false`
+   - VPS has no GUI/browser, so `xdg-open` command was failing
+   - Commit: `dd095da`
 
 ---
 
-## [IN PROGRESS]
-- Nothing currently in progress
+## [DONE] - Session 2.1 (2026-03-11)
+
+### VPS Network Access Fix
+
+1. **vite.config.js** - Added `host: '0.0.0.0'` to server config
+   - Vite was only listening on `localhost` (127.0.0.1), not accessible from external IPs
+   - Now binds to all network interfaces so `http://VPS_IP:3000` works from local browser
+
+---
+
+## [DONE] - Session 3 (2026-03-11)
+
+### Feature: Source/Platform Tracking + Dashboard Fix
+
+**Goal:** Enable manual input of profit/loss with detailed source info (which platform/exchange the trade came from).
+
+#### Changes Made
+
+1. **src/stores/useTradeStore.js** (`767d2d2`)
+   - Added `getStats()` function returning unified stats object: `{ totalPnl, monthlyPnl, winRate, totalTrades, bestDay, worstDay, pnlBySource }`
+   - Added `source` field support in trade data
+   - Added `pnlBySource` aggregation — groups P&L and trade count by platform
+   - Kept all existing individual getter functions intact
+
+2. **src/components/trade/TradeForm.jsx** (`c78c429`)
+   - Added **Source/Platform selector** with 7 preset options: Binance, Bybit, OKX, Tokocrypto, Forex, Saham, Other
+   - 4-column button grid for quick selection, gold highlight on active
+   - "Other" option shows custom text input for any platform name
+   - Source is required field with validation
+   - Edit mode auto-detects preset vs custom source
+   - Added Cancel button, scroll support for modal (`max-h-[90vh]`)
+
+3. **src/components/trade/TradeTable.jsx** (`d5b9e43`)
+   - Added **Source column** with sortable header
+   - Source displayed as styled badge (`bg-white/[0.08]`)
+   - **Bug fix:** Changed `deleteTrade` to `removeTrade` (matching actual store method)
+   - Search now includes source field (search by pair, source, or notes)
+   - Sort logic extended with source field support
+
+4. **src/pages/Dashboard.jsx** (`192f5bb`)
+   - Dashboard now correctly calls `getStats()` from the updated store
+   - Added **source badge** to Recent Trades list (small inline tag showing platform)
+   - **Typo fix:** `text-gray--400` corrected to `text-gray-400` in Best Day section
+
+#### New Trade Data Structure
+```json
+{
+  "pair": "BTC/USDT",
+  "type": "long",
+  "entryPrice": 65000,
+  "exitPrice": 67000,
+  "pnl": 200,
+  "source": "Binance",
+  "date": "2026-03-11",
+  "time": "14:30",
+  "notes": "Breakout trade on 4H chart",
+  "id": "auto-generated-uuid",
+  "createdAt": 1741686600000
+}
+```
 
 ---
 
 ## [NEXT SESSION] - Suggested Next Steps
 
-1. **Pull latest and run `npm run dev`** - verify app is accessible at `http://VPS_IP:3000` from local browser
-2. **Check firewall** - make sure port 3000 is open on VPS (`sudo ufw allow 3000` or equivalent)
-3. **Test core flows manually:**
-   - Add a trade via TradeForm
-   - Check Dashboard stats populate correctly
-   - Check Calendar view shows trades on correct dates
-   - Delete a trade from TradeTable
-   - Verify Analytics charts render with sample data
-4. **Check for runtime warnings** - look for React key warnings, missing props, etc.
-5. **Review remaining PLAN.md tasks** - Phase 2 features (import/export, advanced analytics) if Phase 1 is stable
-6. **If errors persist** - check browser console, paste exact error messages for targeted fixes
+1. **Test the full flow:** Add trade with source -> verify it shows in table with Source column -> check Dashboard stats + source badge
+2. **Add P&L by Source breakdown** on Analytics page (pie chart or bar chart showing profit per platform)
+3. **Import/Export trades** as CSV/JSON for backup
+4. **Advanced filtering** by source/platform on Trades page
+5. **Date range picker** for Dashboard stats
 
 ---
 
 ## Architecture Notes (for context recovery)
 - **Stack:** React 18 + Vite + TailwindCSS + Framer Motion + Recharts + Zustand
 - **State:** Zustand with localStorage persistence (`trading-pnl-storage` key)
-- **No backend** - all data in localStorage
+- **No backend** - all data in localStorage (structure ready for DB migration)
 - **Color system:** emerald = profit green (#00c48c), ruby = loss red (#ff4d6a), gold = accent (#f0b90b)
-- **Key stores:** useTradeStore (trades + getters), useSettingsStore (currency, theme prefs)
-- **Dev server:** Vite on port 3000, bound to 0.0.0.0, open disabled (headless VPS)
+- **Key stores:** useTradeStore (trades + getStats + individual getters), useSettingsStore (currency, theme prefs)
+- **Source options:** Binance, Bybit, OKX, Tokocrypto, Forex, Saham, Other (custom input)
