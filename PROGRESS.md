@@ -41,6 +41,10 @@
    - Changed `open: true` to `open: false`
    - Fixes `Error: spawn xdg-open ENOENT` on headless VPS environments without a desktop browser
 
+3. **vite.config.js** - Added `host: '0.0.0.0'` to server config
+   - Vite defaults to listening on `localhost` (127.0.0.1) only
+   - Added `host: '0.0.0.0'` so the dev server is accessible from external IPs (e.g., local PC -> VPS)
+
 ### Files Modified
 - `src/index.css`
 - `vite.config.js`
@@ -54,16 +58,17 @@
 
 ## [NEXT SESSION] - Suggested Next Steps
 
-1. **Run `npm run dev` and verify the app loads** without errors in terminal or browser console
-2. **Test core flows manually:**
+1. **Pull latest and run `npm run dev`** - verify app is accessible at `http://VPS_IP:3000` from local browser
+2. **Check firewall** - make sure port 3000 is open on VPS (`sudo ufw allow 3000` or equivalent)
+3. **Test core flows manually:**
    - Add a trade via TradeForm
    - Check Dashboard stats populate correctly
    - Check Calendar view shows trades on correct dates
    - Delete a trade from TradeTable
    - Verify Analytics charts render with sample data
-3. **Check for runtime warnings** - look for React key warnings, missing props, etc.
-4. **Review remaining PLAN.md tasks** - Phase 2 features (import/export, advanced analytics) if Phase 1 is stable
-5. **If errors persist** - check browser console, paste exact error messages for targeted fixes
+4. **Check for runtime warnings** - look for React key warnings, missing props, etc.
+5. **Review remaining PLAN.md tasks** - Phase 2 features (import/export, advanced analytics) if Phase 1 is stable
+6. **If errors persist** - check browser console, paste exact error messages for targeted fixes
 
 ---
 
@@ -73,3 +78,4 @@
 - **No backend** - all data in localStorage
 - **Color system:** emerald = profit green (#00c48c), ruby = loss red (#ff4d6a), gold = accent (#f0b90b)
 - **Key stores:** useTradeStore (trades + getters), useSettingsStore (currency, theme prefs)
+- **Dev server:** Vite on port 3000, bound to 0.0.0.0, open disabled (headless VPS)
